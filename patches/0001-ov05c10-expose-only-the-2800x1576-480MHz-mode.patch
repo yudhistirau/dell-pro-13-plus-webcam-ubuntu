@@ -1,0 +1,68 @@
+ov05c10: expose only the 2800x1576 @ 480 MHz mode
+
+On an Arrow Lake IPU6 laptop where the sensor sits behind an Intel CVS chip,
+the 2888x1808 @ 900 MHz mode starts streaming but no frame ever arrives.
+Drop it from the mode table, default to 2800x1576, and make the
+LINK_FREQ control default follow the active mode.
+
+Applies to drivers/media/i2c/ov05c10.c from https://github.com/intel/ipu6-drivers
+at commit 71bddb5158fb7f0bd244ad7aa6b2efab024531a7.
+
+--- a/drivers/media/i2c/ov05c10.c
++++ b/drivers/media/i2c/ov05c10.c
+@@ -129,7 +129,7 @@
+ 	{ CCI_REG8(0x01), 0x01 },
+ };
+ 
+-static const struct cci_reg_sequence mode_2888_1808_30fps[] = {
++static const struct cci_reg_sequence mode_2888_1808_30fps[] __maybe_unused = {
+ 	{ CCI_REG8(0xfd), 0x00 },
+ 	{ CCI_REG8(0x20), 0x00 },
+ 	{ CCI_REG8(0xfd), 0x00 },
+@@ -432,20 +432,11 @@
+ };
+ 
+ static const struct ov05c10_mode supported_modes[] = {
+-	{
+-		.width = 2888,
+-		.height = 1808,
+-		.hts = 1608,
+-		.vts_def = 3640,
+-		.vts_min = 3640,
+-		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
+-		.fps = 30,
+-		.reg_list = {
+-			.num_of_regs = ARRAY_SIZE(mode_2888_1808_30fps),
+-			.regs = mode_2888_1808_30fps,
+-		},
+-		.link_freq_index = 0,
+-	},
++	/*
++	 * The 2888x1808 @ 900 MHz mode is left out: on the tested IPU6 + CVS
++	 * laptop the sensor never delivers frames in it, so only the
++	 * 2800x1576 @ 480 MHz mode is exposed.
++	 */
+ 	{
+ 		.width = 2800,
+ 		.height = 1576,
+@@ -606,7 +597,8 @@
+ 
+ 	ov05c10->link_freq = v4l2_ctrl_new_int_menu(ctrl_hdlr,
+ 		&ov05c10_ctrl_ops, V4L2_CID_LINK_FREQ,
+-		ARRAY_SIZE(ov05c10_link_freq_menu_items) - 1, 0,
++		ARRAY_SIZE(ov05c10_link_freq_menu_items) - 1,
++		ov05c10->cur_mode->link_freq_index,
+ 		ov05c10_link_freq_menu_items);
+ 	if (ov05c10->link_freq)
+ 		ov05c10->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+@@ -863,8 +855,8 @@
+ 		.pad = 0,
+ 		.format = {
+ 			.code = MEDIA_BUS_FMT_SGRBG10_1X10,
+-			.width = 2888,
+-			.height = 1808,
++			.width = 2800,
++			.height = 1576,
+ 		},
+ 	};
+ 

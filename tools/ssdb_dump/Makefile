@@ -1,0 +1,11 @@
+obj-m += ssdb_dump.o
+
+KERNELRELEASE ?= $(shell uname -r)
+KERNEL_SRC ?= /lib/modules/$(KERNELRELEASE)/build
+PWD := $(shell pwd)
+
+all:
+	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) modules
+
+clean:
+	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) clean
