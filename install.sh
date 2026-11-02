@@ -38,6 +38,30 @@ fi
 echo "    kernel : $KREL"
 echo "    model  : $(cat /sys/class/dmi/id/product_name 2>/dev/null || echo unknown)"
 
+say "Requesting sudo access"
+# Ask once, up front, so a missing password fails here with a clear message
+# instead of halfway through the install. Caching it also keeps every later
+# sudo call in this script non-interactive.
+if sudo -n true 2>/dev/null; then
+    echo "    already authorised"
+elif [ -t 0 ]; then
+    sudo -v || die "sudo authentication failed"
+elif [ -n "${SUDO_ASKPASS:-}" ]; then
+    sudo -A -v || die "sudo authentication failed via SUDO_ASKPASS"
+else
+    die "No terminal available to read the sudo password.
+
+Run this script from a normal terminal window:
+
+    bash $0
+
+Or, for a non-interactive shell, point SUDO_ASKPASS at a graphical helper:
+
+    printf '#!/bin/sh\nexec zenity --password\n' > /tmp/askpass.sh
+    chmod +x /tmp/askpass.sh
+    SUDO_ASKPASS=/tmp/askpass.sh bash $0"
+fi
+
 say "Installing build prerequisites"
 sudo apt-get update -qq
 sudo apt-get install -y -q build-essential dkms git "linux-headers-$KREL" v4l-utils

@@ -12,6 +12,18 @@ say() { printf '\n\033[1;34m==>\033[0m %s\n' "$*"; }
 
 [ "$(id -u)" -eq 0 ] && { echo "Run as a normal user, not root."; exit 1; }
 
+if ! sudo -n true 2>/dev/null; then
+    if [ -t 0 ]; then
+        sudo -v || { echo "sudo authentication failed"; exit 1; }
+    elif [ -n "${SUDO_ASKPASS:-}" ]; then
+        sudo -A -v || { echo "sudo authentication failed"; exit 1; }
+    else
+        echo "No terminal available to read the sudo password."
+        echo "Run this script from a normal terminal window."
+        exit 1
+    fi
+fi
+
 say "Removing DKMS packages"
 for spec in "$CVS_PKG/$CVS_VER" "$OV_PKG/$OV_VER"; do
     if dkms status "$spec" 2>/dev/null | grep -q .; then
